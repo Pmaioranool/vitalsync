@@ -1,0 +1,104 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop", "feature/*" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # === ÉTAPE 1 : LINT & TESTS ===
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./backend
+        run: npm run lint
+        
+      - name: Run Tests (Jest)
+        working-directory: ./backend
+        run: npm test
+
+  # === ÉTAPE 2 : BUILD DOCKER ===
+  build-and-push:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Backend Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:${{ github.sha }}
+
+      - name: Build and push Frontend Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}
+
+  # === ÉTAPE 3 : DÉPLOIEMENT STAGING & HEALTH CHECK ===
+  deploy-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Extract Environment variables for docker-compose
+        run: |
+          echo "POSTGRES_USER=test_user" > .env
+          echo "POSTGRES_PASSWORD=test_pass" >> .env
+          echo "POSTGRES_DB=vitalsync_test" >> .env
+
+      - name: Start Staging Environment (Docker Compose)
+        run: docker-compose up -d --build
+
+      - name: Wait for services to be ready
+        run: sleep 10 # Pause de 10s pour laisser le temps à node et postgres de s'initialiser
+
+      - name: Run Health Check
+        run: |
+          # Interroger l'endpoint /health du backend via curl
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/health)
+          
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "Health check a échoué avec le code $HTTP_STATUS"
+            docker-compose logs backend
+            exit 1
+          fi
+          echo "Health check réussi (Code 200) !"
+
+      - name: Clean up Staging Environment
+        if: always()
+        run: docker-compose down -v
