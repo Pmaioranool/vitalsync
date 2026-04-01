@@ -1,0 +1,8 @@
+# Ignorer les modules Node.js locaux pour forcer une installation propre dans l'image Docker
+node_modules/
+
+# Protéger les éventuels secrets locaux pour qu'ils ne soient jamais copiés
+.env
+
+# Exclure les métadonnées Git
+.git/
