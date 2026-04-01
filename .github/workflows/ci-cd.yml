@@ -85,7 +85,7 @@ jobs:
           echo "POSTGRES_DB=vitalsync_test" >> .env
 
       - name: Start Staging Environment (Docker Compose)
-        run: docker-compose up -d --build
+        run: docker compose up -d --build
 
       - name: Wait for services to be ready
         run: sleep 10 # Pause de 10s pour laisser le temps à node et postgres de s'initialiser
@@ -97,11 +97,11 @@ jobs:
           
           if [ "$HTTP_STATUS" -ne 200 ]; then
             echo "Health check a échoué avec le code $HTTP_STATUS"
-            docker-compose logs backend
+            docker compose logs backend
             exit 1
           fi
           echo "Health check réussi (Code 200) !"
 
       - name: Clean up Staging Environment
         if: always()
-        run: docker-compose down -v
+        run: docker compose down -v
