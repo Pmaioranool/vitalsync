@@ -1,3 +1,10 @@
+# === POURQUOI UTILISER LE MULTI-STAGE BUILD ? ===
+# Le multi-stage build est pertinent pour deux raisons majeures :
+# 1. Sécurité : Il réduit la surface d'attaque en excluant l'outillage de développement
+# 2. Taille d'image : En ne conservant que l'environnement métier strict l'image finale est
+#    considérablement allégée, ce qui rend les déploiements plus rapides et moins coûteux.
+
+
 
 FROM node:20-alpine AS builder
 
@@ -20,7 +27,7 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Définition de l'environnement en production
-ENV NODE_ENV=$NODE_ENV
+ENV NODE_ENV=$
 
 COPY package*.json ./
 
