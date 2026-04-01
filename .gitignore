@@ -1,17 +1,6 @@
 # Dépendances Node.js
 node_modules/
 
-# Fichiers de log
-npm-debug.log
-yarn-error.log
-
 # Fichiers d'environnement
 .env
 
-# Dossiers de test et de couverture
-coverage/
-.nyc_output/
-
-# Fichiers système
-.DS_Store
-Thumbs.db
