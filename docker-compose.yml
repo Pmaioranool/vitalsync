@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15-alpine
+    container_name: vitalsync-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - vitalsync-network
+
+  backend:
+    build:
+      context: ./backend
+      target: production
+    container_name: vitalsync-backend
+    restart: unless-stopped
+    depends_on:
+      - database
+    env_file:
+      - .env
+    networks:
+      - vitalsync-network
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: vitalsync-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - vitalsync-network
+
+networks:
+  vitalsync-network:
+    driver: bridge
+
+volumes:
+  pgdata:
