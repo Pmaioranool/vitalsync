@@ -18,6 +18,8 @@ services:
       target: production
     container_name: vitalsync-backend
     restart: unless-stopped
+    ports:
+      - "3000:3000"
     depends_on:
       - database
     env_file:
